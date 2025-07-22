@@ -6,15 +6,14 @@ authors = [
     {name = "Tapan Chugh", email = "tapanc@cs.washington.edu"}
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     # Core framework dependencies
     "pydantic>=2.11.5",
-    "fastmcp>=2.8.1",
-    # Service dependencies
+    "fastmcp @ git+https://github.com/chughtapan/fastmcp.git@126dd7b16a47074fcc3c57ddba44e4c3cc97a521",
     "openai>=1.0.0",
     "python-dotenv>=1.1.0",
-    # Development dependencies
+    "pyyaml>=6.0",
     "mypy>=1.5.1",
     "flake8-pyproject==1.2.3",
     "flake8>=6.1.0",
@@ -23,15 +22,27 @@ dependencies = [
     "pre-commit==3.5.0",
     "pytest>=8.4.0",
     "pytest-asyncio>=1.0.0",
-    "fast-agent-mcp>=0.2.36",
+    "fast-agent-mcp @ git+https://github.com/chughtapan/fast-agent.git@5496d7cc1466a7422d02fc381daafcd96f9b4636",
+    "jsonschema>=4.0.0",
+    "types-jsonschema>=4.24.0.20250708",
 ]
+
+[project.scripts]
+mcpw-agent = "mcp_w.agent:main"
+mcpw-router = "mcp_w.router:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_w"]
+
+[tool.hatch.build]
+include = ["src/mcp_w/*.yaml", "src/mcp_w/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

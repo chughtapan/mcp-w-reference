@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "email": {
+      "url": "http://localhost:3001/mcp"
+    },
+    "calendar": {
+      "url": "http://localhost:3002/mcp"
+    }
+  }
+}
