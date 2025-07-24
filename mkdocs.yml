@@ -1,0 +1,98 @@
+site_name: RESTful MCP
+site_description: A pattern for building scalable MCP services using five core operations
+site_url: https://restful-mcp.readthedocs.io
+repo_url: https://github.com/chughtapan/restful-mcp
+repo_name: chughtapan/restful-mcp
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_source: true
+            show_category_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            docstring_style: google
+            merge_init_into_class: true
+            separate_signature: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - footnotes
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Concepts:
+      - The Pattern: concepts/pattern.md
+      - Architecture: concepts/architecture.md
+      - Cross-Service Communication: concepts/cross-service.md
+  - Developers:
+      - Building Services: developers/building-services.md
+      - Gateway Implementation: developers/gateway.md
+  - Consumers:
+      - Using RESTful MCP: consumers/usage.md
+  - Examples:
+      - Email Service: examples/email-service.md
+      - Calendar Service: examples/calendar-service.md
+  - Migration:
+      - From Tools to Resources: migration/from-tools.md
+  - API Reference:
+      - restful_mcp.agent: api/agent.md
+      - restful_mcp.gateway: api/gateway.md
+      - restful_mcp.config: api/config.md
+      - restful_mcp.types: api/types.md
+      - restful_mcp.constants: api/constants.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/chughtapan/restful-mcp
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/restful-mcp/

@@ -1,22 +1,22 @@
-# MCP-W Reference Implementation
+# RESTful MCP
 
-A reference implementation for **ModelContextProtocol: Web Extension (MCP-W)** - a resource-centric approach to MCP that implements the four core capabilities pattern for building scalable, maintainable MCP servers.
+**RESTful MCP** (McpWeb Pattern) - A pattern for building scalable MCP services. Instead of exposing dozens of tools, every service implements just five core capabilities, creating a uniform interface that scales to any number of services.
 
 ## Overview
 
-This project demonstrates a clean three-component architecture for MCP servers:
+RESTful MCP solves the "tool explosion" problem in MCP by introducing a resource-centric pattern:
 
-- **Client**: AI agent implementation using fast-agent framework
-- **Server**: Routing infrastructure using FastMCP with proxy pattern
-- **Services**: Individual service implementations following the MCP-W pattern
+- **Problem**: Traditional MCP services expose 40+ tools each, causing context bloat and confusion
+- **Solution**: Gateway server provides five operations (LIST, VIEW, GET, FIND, POST) for all services
+- **Result**: 5 operations for 100 services instead of 4000+ tools
 
 ### Key Features
 
-- **Resource-Centric Design**: Clear separation between data (resources) and actions (tools)
-- **Four Core Capabilities**: LIST, GET, SEARCH, INVOKE operations
-- **Router Pattern**: Single server proxying to multiple services
-- **Service Isolation**: Better error handling and composability
-- **Elicitation-Based Actions**: User-controlled workflows with smart defaults
+- **Five Core Operations**: LIST, VIEW, GET, FIND, POST - provided by the gateway server
+- **Resource-Centric Design**: Everything has a URI (mcpweb://service/resource)
+- **Progressive Discovery**: Start with LIST, drill down as needed
+- **Context Efficient**: Minimal tool definitions leave more room for actual work
+- **Service Isolation**: Each service operates independently
 
 ## Quick Start
 
@@ -24,7 +24,7 @@ This project demonstrates a clean three-component architecture for MCP servers:
 
 ```bash
 git clone <repository-url>
-cd mcp-w-reference
+cd restful-mcp
 uv pip install -e .
 ```
 
@@ -44,9 +44,9 @@ The project has two main components that need to be started:
    uv run fastmcp run -t streamable-http examples.calendar.calendar --port 3002
    ```
 
-2. **Start the MCP-W client (in another terminal):**
+2. **Start the RESTful MCP client (in another terminal):**
    ```bash
-   mcpw-agent
+   restful-mcp-agent
    ```
 
    The client will automatically:
@@ -54,49 +54,76 @@ The project has two main components that need to be started:
    - Provide an interactive chat interface
    - Allow you to work with any connected MCP services
 
-   > **Note**: After installation with `uv pip install -e .`, the `mcpw-agent` command will be available system-wide
+   > **Note**: After installation with `uv pip install -e .`, the `restful-mcp-agent` command will be available system-wide
 
 ### Try It Out
 
-Once both components are running, you can interact with the services:
+Once both components are running, you can interact with the services using the five operations:
 
-**Email Service:**
-- **"list email"** - See available email resources and capabilities
-- **"search email project"** - Find email threads containing "project"
-- **"get email://thread/thread_001"** - View details of a specific email thread
-- **"invoke email reply_thread thread_001"** - Compose and send a reply
+```
+# Discover available services
+LIST
+→ ["email", "calendar"]
 
-**Calendar Service:**
-- **"list calendar"** - See available calendar resources and capabilities
-- **"get calendar://today"** - View today's events
-- **"get calendar://week"** - View this week's events
-- **"search calendar lunch"** - Find events containing "lunch"
-- **"invoke calendar create_event"** - Create a new calendar event
-- **"invoke calendar reschedule_event evt_001"** - Reschedule an event
+# Learn about a service
+VIEW email
+→ Email service capabilities and resources
+
+# Find content
+FIND email "project update"
+→ ["mcpweb://email/thread/thread_001", "mcpweb://email/thread/thread_042"]
+
+# Get specific resource
+GET mcpweb://email/thread/thread_001
+→ Full email thread with messages
+
+# Perform an action
+POST mcpweb://email/thread/thread_001/reply
+→ Interactive prompt to compose reply
+```
+
+### Example Workflows
+
+**Email Workflow:**
+```
+VIEW email                              # See what email service offers
+FIND email "budget"                    # Find budget-related emails
+GET mcpweb://email/thread/thread_042    # Read specific thread
+POST mcpweb://email/thread/thread_042/reply  # Reply with smart defaults
+```
+
+**Calendar Workflow:**
+```
+GET mcpweb://calendar/today             # See today's events
+GET mcpweb://calendar/week              # See this week
+FIND calendar "team meeting"           # Find specific events
+POST mcpweb://calendar/event/evt_001/reschedule  # Reschedule event
+```
 
 ### Troubleshooting
 
 - **"Service not found"**: Make sure the services are running (email on port 3001, calendar on port 3002)
 - **"Connection refused"**: Check that both terminals are running and there are no port conflicts
-- **"Config not found"**: Make sure you've installed the project with `uv pip install -e .` and the `mcpw-agent` command is available
+- **"Config not found"**: Make sure you've installed the project with `uv pip install -e .` and the `restful-mcp-agent` command is available
 - **Check logs**: View `/tmp/fastagent.log` for detailed logging information
 
 ## Architecture
 
-### Four Core Capabilities
+### Five Core Operations
 
-1. **LIST**: Discover service capabilities and available resources
-2. **GET**: Retrieve specific resources by URI
-3. **SEARCH**: Find resources using natural language queries
-4. **INVOKE**: Perform actions through interactive elicitation
+1. **LIST**: Discover what services are available
+2. **VIEW**: Learn what a specific service can do
+3. **GET**: Retrieve specific resources by URI
+4. **FIND**: Find resources matching a query
+5. **POST**: Perform actions on resources
 
 ### Three-Component Architecture
 
 **Core Components:**
-- `agent.py`: Fast-agent client with MCP router integration
-- `router.py`: FastMCP router using ProxyClient for service composition
-- `fastagent.config.yaml`: Unified configuration for agent and router
-- `server.config.json`: Router service connections configuration
+- `agent.py`: Fast-agent client with MCP gateway integration
+- `gateway.py`: Gateway server implementation for service aggregation
+- `fastagent.config.yaml`: Unified configuration for agent and gateway
+- `server.config.json`: Gateway service connections configuration
 
 **Example Services:**
 - `examples/email/`: Standalone FastMCP email service example
@@ -118,8 +145,8 @@ Once both components are running, you can interact with the services:
 - Poor service isolation
 - Context window explosion
 
-**MCP-W (Resource-Centric):**
-- 4 core operations
+**RESTful MCP (Resource-Centric):**
+- 5 core operations provided by gateway
 - URI-based resource access
 - Clear separation of concerns
 - Better error handling
@@ -127,10 +154,10 @@ Once both components are running, you can interact with the services:
 ## Project Structure
 
 ```
-src/mcp_w/
+src/restful_mcp/
 ├── __init__.py            # Package initialization
 ├── agent.py               # Fast-agent client implementation
-├── router.py              # FastMCP router for service composition
+├── gateway.py             # FastMCP gateway for service aggregation
 ├── fastagent.config.yaml  # Agent and router configuration
 └── service_schema.json    # Service validation schema
 
@@ -152,7 +179,7 @@ tests/
 ## Implementation Details
 
 ### Router Architecture
-The router (`router.py`) uses FastMCP's ProxyClient to forward requests:
+The gateway (`gateway.py`) uses FastMCP's ProxyClient to forward requests:
 - Single FastMCP server exposing unified interface
 - Service name as first parameter for all operations
 - Native MCP protocol communication via ProxyClient
