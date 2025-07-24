@@ -1,8 +1,8 @@
 site_name: RESTful MCP
 site_description: A pattern for building scalable MCP services using five core operations
 site_url: https://restful-mcp.readthedocs.io
-repo_url: https://github.com/yourusername/restful-mcp
-repo_name: restful-mcp
+repo_url: https://github.com/chughtapan/restful-mcp
+repo_name: chughtapan/restful-mcp
 
 theme:
   name: material
@@ -77,7 +77,7 @@ nav:
       - Building Services: developers/building-services.md
       - Gateway Implementation: developers/gateway.md
   - Consumers:
-      - Using McpWeb: consumers/usage.md
+      - Using RESTful MCP: consumers/usage.md
   - Examples:
       - Email Service: examples/email-service.md
       - Calendar Service: examples/calendar-service.md
@@ -93,6 +93,6 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/yourusername/restful-mcp
+      link: https://github.com/chughtapan/restful-mcp
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/restful-mcp/

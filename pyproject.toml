@@ -1,12 +1,27 @@
 [project]
-name = "mcp-w_reference"
+name = "restful-mcp"
 version = "0.0.0dev"
-description = "Reference implementation for ModelContextProtocol: Web Extension"
+description = "RESTful MCP - A pattern for building scalable Model Context Protocol services"
 authors = [
     {name = "Tapan Chugh", email = "tapanc@cs.washington.edu"}
 ]
 readme = "README.md"
 requires-python = ">=3.12"
+license = {text = "MIT"}
+keywords = ["mcp", "llm", "ai", "agents", "microservices"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+
+[project.urls]
+Homepage = "https://github.com/chughtapan/restful-mcp"
+Documentation = "https://restful-mcp.readthedocs.io"
+Repository = "https://github.com/chughtapan/restful-mcp"
+Issues = "https://github.com/chughtapan/restful-mcp/issues"
 dependencies = [
     # Core framework dependencies
     "pydantic>=2.11.5",
@@ -25,11 +40,15 @@ dependencies = [
     "fast-agent-mcp @ git+https://github.com/chughtapan/fast-agent.git@5496d7cc1466a7422d02fc381daafcd96f9b4636",
     "jsonschema>=4.0.0",
     "types-jsonschema>=4.24.0.20250708",
+    # Documentation
+    "mkdocs>=1.5.3",
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
 ]
 
 [project.scripts]
-mcpw-agent = "mcp_w.agent:main"
-mcpw-router = "mcp_w.router:main"
+restful-mcp-agent = "restful_mcp.agent:main"
+restful-mcp-gateway = "restful_mcp.gateway:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -39,10 +58,10 @@ build-backend = "hatchling.build"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcp_w"]
+packages = ["src/restful_mcp"]
 
 [tool.hatch.build]
-include = ["src/mcp_w/*.yaml", "src/mcp_w/*.json"]
+include = ["src/restful_mcp/*.yaml", "src/restful_mcp/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -51,7 +70,7 @@ addopts = "--asyncio-mode=auto --ignore=tests/integration/"
 
 [tool.black]
 line-length = 88
-target-version = ['py311']
+target-version = ['py312']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -60,7 +79,7 @@ multi_line_output = 3
 line_length = 88
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 mypy_path = "src"
 exclude = "^examples/google_api|tests|scripts"
 warn_return_any = true
