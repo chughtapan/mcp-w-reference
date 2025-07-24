@@ -1,19 +1,55 @@
 """
-Email service implementation for MCP-W.
+Email service implementation using MCPW pattern.
 
-This module provides email management capabilities through the four core operations:
-LIST, GET, SEARCH, and INVOKE.
+This service provides email management capabilities including:
+- Viewing email threads and inbox
+- Searching emails by subject or participants
+- Replying to email threads with user interaction
 
-This is a standalone FastMCP service that runs independently via:
-    fastmcp run -t streamable-http src.mcp_w.services.email --port 3001
+The service uses relative resource paths that are automatically
+prefixed by the router when mounted.
 """
 
-from fastmcp import Context, FastMCP
+from typing import Dict, List, Optional
 
-# No need to import MCP types - FastMCP handles conversion automatically
+from fastmcp import Context
 from pydantic import BaseModel, Field
 
-# Sample email data (in a real implementation, this would come from an email API)
+from src.mcp_w.mcpw import MCPWService
+
+# ==================== Constants ====================
+
+SERVICE_NAME = "Email Service"
+SERVICE_INSTRUCTIONS = """Email management service with thread, search, and reply capabilities.
+
+Resources:
+- /inbox - View all email threads
+- /thread/{thread_id} - View specific thread details
+
+Tools:
+- search_resources - Find threads by subject or participants
+- invoke_action - Reply to threads (supports: reply_thread)
+"""
+
+# Error messages
+ERROR_THREAD_NOT_FOUND = "Thread '{thread_id}' not found"
+ERROR_UNKNOWN_ACTION = "Unknown action: {action}. Available: reply_thread"
+
+# ==================== Data Models ====================
+
+class ReplyDetails(BaseModel):
+    """Schema for collecting reply details through user elicitation."""
+    recipients: str = Field(description="Recipients (comma-separated)")
+    content: str = Field(default="", description="Reply content")
+    send_immediately: bool = Field(
+        default=False, 
+        description="Send now or save as draft"
+    )
+
+
+# ==================== Sample Data ====================
+# In a real implementation, this would come from an email API
+
 SAMPLE_THREADS = [
     {
         "thread_id": "thread_001",
@@ -31,117 +67,77 @@ SAMPLE_THREADS = [
     },
 ]
 
-# Sample thread details (in a real implementation, this would be fetched from email API)
 SAMPLE_THREAD_DETAILS = {
     "thread_001": {
-        "content": "Can we schedule a meeting for next week to discuss the project updates? I'd like to review the latest milestones."
+        "content": "Can we schedule a meeting for next week to discuss the project updates? "
+                   "I'd like to review the latest milestones."
     },
     "thread_002": {
-        "content": "Please review the Q1 budget numbers and let me know if you have any questions. The finance team needs feedback by Friday."
+        "content": "Please review the Q1 budget numbers and let me know if you have any questions. "
+                   "The finance team needs feedback by Friday."
     },
 }
 
+# ==================== Service Setup ====================
 
-class ReplyDetails(BaseModel):
-    """Schema for collecting reply details through elicitation"""
+mcp = MCPWService(SERVICE_NAME, instructions=SERVICE_INSTRUCTIONS)
 
-    recipients: str = Field(description="Recipients (comma-separated)")
-    content: str = Field(default="", description="Reply content")
-    send_immediately: bool = Field(
-        default=False, description="Send now or save as draft"
-    )
+# ==================== Resource Handlers ====================
 
-
-# Create FastMCP server instance
-mcp = FastMCP(
-    "Email Service",
-    instructions="Email management service with thread, search, and reply capabilities. Resources are available natively via MCP resource system.",
-)
-
-
-@mcp.tool
-async def list_resources() -> dict:
+@mcp.resource("/inbox")
+async def get_inbox_resource() -> Dict:
     """
-    LIST operation - return email service capabilities.
-
-    Returns dict with available resources, actions, and usage instructions.
+    Get all email threads from inbox.
+    
+    Returns a summary of all threads including subject, participants,
+    last update time, and unread count.
     """
-    # Get actual thread IDs for specific resource URIs
-    thread_resources = [
-        f"email://thread/{thread['thread_id']}" for thread in SAMPLE_THREADS
+    threads_data = [
+        {
+            "thread_id": thread["thread_id"],
+            "subject": thread["subject"],
+            "participants": thread["participants"],
+            "last_updated": thread["last_updated"],
+            "unread_count": thread["unread_count"],
+        }
+        for thread in SAMPLE_THREADS
     ]
-
+    
     return {
-        "resources": {
-            "static": ["email://inbox"],
-            "dynamic": thread_resources,
-            "patterns": ["email://thread/{thread_id}"],
-        },
-        "actions": ["reply_thread"],
-        "capabilities": [
-            "list_resources",
-            "get_resource",
-            "search_resources",
-            "invoke_action",
-        ],
-        "instructions": {
-            "usage": "Email service for managing email threads and communications",
-            "workflow": [
-                "Access 'email://inbox' resource to see all email threads",
-                "Use 'search_resources' to find specific threads by subject or participant",
-                "Access 'email://thread/{thread_id}' resource to view thread details",
-                "Use 'invoke_action reply_thread {thread_id}' to reply to a thread",
-            ],
-            "note": "Resources can be accessed directly via MCP's native resource system or through the get_resource tool",
-        },
+        "inbox": {
+            "total_threads": len(threads_data),
+            "threads": threads_data
+        }
     }
 
 
-# Register MCP native resources
-@mcp.resource("email://inbox")
-async def get_inbox_resource() -> dict:
-    """
-    Get all email threads from inbox.
-
-    Returns:
-        Dict with thread listing
-    """
-    threads_data = []
-    for thread in SAMPLE_THREADS:
-        threads_data.append(
-            {
-                "thread_id": thread["thread_id"],
-                "subject": thread["subject"],
-                "participants": thread["participants"],
-                "last_updated": thread["last_updated"],
-                "unread_count": thread["unread_count"],
-            }
-        )
-
-    return {"inbox": {"total_threads": len(threads_data), "threads": threads_data}}
-
-
-@mcp.resource("email://thread/{thread_id}")
-async def get_thread_resource(thread_id: str) -> dict:
+@mcp.resource("/thread/{thread_id}")
+async def get_thread_resource(thread_id: str) -> Dict:
     """
     Get detailed information about a specific email thread.
-
+    
     Args:
         thread_id: The thread ID to retrieve
-
+        
     Returns:
-        Dict with thread details
+        Complete thread details including content, or error if not found
     """
     # Find the thread
-    thread = next((t for t in SAMPLE_THREADS if t["thread_id"] == thread_id), None)
-    if not thread:
-        return {"error": f"Thread '{thread_id}' not found"}
-
-    # Get thread details
-    thread_details = SAMPLE_THREAD_DETAILS.get(
-        thread_id, {"content": "No content available"}
+    thread = next(
+        (t for t in SAMPLE_THREADS if t["thread_id"] == thread_id),
+        None
     )
-
+    
+    if not thread:
+        return {"error": ERROR_THREAD_NOT_FOUND.format(thread_id=thread_id)}
+    
+    # Get thread content
+    thread_details = SAMPLE_THREAD_DETAILS.get(
+        thread_id, 
+        {"content": "No content available"}
+    )
+    
+    # Return complete thread information
     return {
         "thread_id": thread["thread_id"],
         "subject": thread["subject"],
@@ -151,166 +147,167 @@ async def get_thread_resource(thread_id: str) -> dict:
         "content": thread_details["content"],
     }
 
+# ==================== Tool Implementations ====================
 
 @mcp.tool
-async def get_resource(resource_uri: str, ctx: Context) -> str:
+async def search_resources(query: str) -> List[str]:
     """
-    GET operation - retrieve email resources by URI.
-
-    This tool provides access to email resources. In practice, most LLMs will
-    directly access the resources via MCP's native resource system, but this
-    tool ensures compatibility with the MCP-W pattern.
-
+    Search email threads by subject or participants.
+    
+    Searches are case-insensitive and match partial strings.
+    
     Args:
-        resource_uri: The email resource URI to retrieve
-        ctx: FastMCP context (automatically injected)
-
+        query: Search string to match against subjects and participants
+        
     Returns:
-        Resource data as string or error message
-    """
-    try:
-        # Use the context to access the resource through MCP's native system
-        resource_contents = await ctx.read_resource(resource_uri)
-
-        if not resource_contents:
-            raise ValueError(f"Resource not found: {resource_uri}")
-
-        # The first content item contains our data
-        # FastMCP returns ReadResourceContents object with 'content' attribute
-        first_content = resource_contents[0]
-
-        # The content attribute contains the actual data
-        if hasattr(first_content, "content"):
-            return first_content.content
-        elif hasattr(first_content, "text"):
-            return first_content.text
-        elif isinstance(first_content, str):
-            return first_content
-        else:
-            # If it's some other type, try to convert to string
-            return str(first_content)
-    except Exception as e:
-        raise ValueError(f"Error retrieving resource '{resource_uri}': {str(e)}")
-
-
-@mcp.tool
-async def search_resources(query: str) -> list[str]:
-    """
-    SEARCH operation - find email threads using natural language queries.
-
-    Searches through email threads by subject and participants.
-
-    Args:
-        query: Natural language search query
-
-    Returns:
-        List of matching thread URIs
+        List of relative resource paths for matching threads
+        
+    Example:
+        >>> await search_resources("budget")
+        ["/thread/thread_002"]
     """
     query_lower = query.lower()
     matching_threads = []
-
+    
     for thread in SAMPLE_THREADS:
-        # Search in subject
+        # Check subject
         if query_lower in thread["subject"].lower():
-            matching_threads.append(f"email://thread/{thread['thread_id']}")
+            matching_threads.append(f"/thread/{thread['thread_id']}")
             continue
-
-        # Search in participants
+        
+        # Check participants
         for participant in thread["participants"]:
             if query_lower in participant.lower():
-                matching_threads.append(f"email://thread/{thread['thread_id']}")
+                matching_threads.append(f"/thread/{thread['thread_id']}")
                 break
-
+    
     return matching_threads
 
 
 @mcp.tool
-async def invoke_action(ctx: Context, action: str, resource_id: str) -> dict | str:
+async def invoke_action(action: str, resource_id: str, ctx: Context) -> Dict:
     """
-    INVOKE operation - perform email actions with user interaction.
-
-    Handles:
-    - reply_thread - Reply to an email thread with elicitation
-
+    Perform actions on email resources.
+    
+    Currently supports:
+    - reply_thread: Reply to an email thread with user elicitation
+    
     Args:
-        ctx: FastMCP context (automatically injected)
-        action: The action to perform
-        resource_id: The thread ID to perform action on
-
+        action: Action to perform
+        resource_id: Full resource URI (e.g., "mcpweb://email/thread/001")
+        ctx: Context for user interaction
+        
     Returns:
-        Action result as dict or string
+        Action result or error message
     """
     if action == "reply_thread":
         return await _handle_reply_thread(ctx, resource_id)
     else:
-        raise ValueError(f"Unknown action: {action}. Available: reply_thread")
+        return {"error": ERROR_UNKNOWN_ACTION.format(action=action)}
 
+# ==================== Action Handlers ====================
 
-async def _handle_reply_thread(ctx: Context, thread_id: str) -> dict | str:
+async def _handle_reply_thread(ctx: Context, resource_id: str) -> Dict:
     """
-    Handle replying to an email thread with elicitation.
-
+    Handle replying to an email thread with user elicitation.
+    
+    Extracts thread information and uses elicitation to collect
+    reply details from the user.
+    
     Args:
         ctx: FastMCP context for elicitation
-        thread_id: The thread ID to reply to
-
+        resource_id: Full resource URI (e.g., "mcpweb://email/thread/001")
+        
     Returns:
-        JSON string with reply result or error
+        Reply result with status and details
     """
+    # Extract thread ID from resource URI
+    thread_id = resource_id.split("/")[-1]
+    
     # Find the thread
-    thread = next((t for t in SAMPLE_THREADS if t["thread_id"] == thread_id), None)
+    thread = next(
+        (t for t in SAMPLE_THREADS if t["thread_id"] == thread_id),
+        None
+    )
+    
     if not thread:
-        return f"Thread '{thread_id}' not found"
-
-    # Prepare smart defaults
+        return {"error": ERROR_THREAD_NOT_FOUND.format(thread_id=thread_id)}
+    
+    # Prepare default recipients
     default_recipients = ", ".join(thread["participants"])
-
+    
     # Create dynamic schema with defaults
     class DynamicReplyDetails(BaseModel):
         recipients: str = Field(
             default=default_recipients,
             description=f"Recipients (comma-separated, default: {default_recipients})",
         )
-        content: str = Field(default="", description="Your reply content")
-        send_immediately: bool = Field(
-            default=False, description="Send immediately or save as draft"
+        content: str = Field(
+            default="",
+            description="Your reply content"
         )
-
-    # Use the injected context to elicit reply details from user
+        send_immediately: bool = Field(
+            default=False,
+            description="Send immediately (True) or save as draft (False)"
+        )
+    
+    # Elicit reply details from user
     reply_details = await ctx.elicit(
-        f"Replying to: '{thread['subject']}'", DynamicReplyDetails
+        f"Replying to: '{thread['subject']}'",
+        DynamicReplyDetails
     )
-
-    # Handle user response
-    if reply_details.action == "cancel":
-        return "Reply cancelled by user"
-
-    if reply_details.action == "decline":
-        return "Reply declined by user"
-
-    if reply_details.action == "accept":
-        data = reply_details.data
-        recipients = [r.strip() for r in data.recipients.split(",") if r.strip()]
-
-        # Simulate sending or saving reply
-        if data.send_immediately:
-            result_message = (
-                f"Reply sent to {', '.join(recipients)}: {data.content[:50]}..."
-            )
-        else:
-            result_message = f"Reply saved as draft for {', '.join(recipients)}: {data.content[:50]}..."
-
-        # Return structured result data
+    
+    # Handle elicitation response
+    if hasattr(reply_details, 'action'):
+        if reply_details.action == "cancel":
+            return {"status": "cancelled", "message": "Reply cancelled by user"}
+        elif reply_details.action == "decline":
+            return {"status": "declined", "message": "Reply declined by user"}
+        elif reply_details.action == "accept":
+            # Process accepted reply
+            data = reply_details.data
+            recipients = [r.strip() for r in data.recipients.split(",") if r.strip()]
+            
+            # Simulate sending or saving
+            if data.send_immediately:
+                return {
+                    "status": "sent",
+                    "thread_id": thread_id,
+                    "recipients": recipients,
+                    "content": data.content,
+                    "message": f"Reply sent to {len(recipients)} recipient(s)"
+                }
+            else:
+                return {
+                    "status": "draft_saved",
+                    "thread_id": thread_id,
+                    "recipients": recipients,
+                    "content": data.content,
+                    "message": "Reply saved as draft"
+                }
+    
+    # Direct response (no action field)
+    recipients = [r.strip() for r in reply_details.recipients.split(",") if r.strip()]
+    
+    if reply_details.send_immediately:
         return {
-            "result": result_message,
+            "status": "sent",
+            "thread_id": thread_id,
             "recipients": recipients,
-            "content": data.content,
-            "sent_immediately": data.send_immediately,
+            "content": reply_details.content,
+            "message": f"Reply sent to {len(recipients)} recipient(s)"
+        }
+    else:
+        return {
+            "status": "draft_saved",
+            "thread_id": thread_id,
+            "recipients": recipients,
+            "content": reply_details.content,
+            "message": "Reply saved as draft"
         }
 
-    return f"Unknown elicitation action: {reply_details.action}"
+# ==================== Main Entry Point ====================
 
-
-# Run the FastMCP server when this module is executed directly
 if __name__ == "__main__":
-    mcp.run()
+    # For standalone testing, get the underlying FastMCP instance
+    mcp.get_mcp_instance().run()

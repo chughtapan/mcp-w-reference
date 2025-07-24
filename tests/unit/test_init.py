@@ -1,3 +1,3 @@
 def test_init() -> None:
-    import mcp_w
-    assert hasattr(mcp_w, "__name__")
+    import restful_mcp
+    assert hasattr(restful_mcp, "__name__")
