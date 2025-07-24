@@ -102,6 +102,9 @@ CLAUDE.md
 .claude/
 .cursorrules
 
+# Development plans
+plans/
+
 # Autosave files
 **/.swp
 **/\#*\#
