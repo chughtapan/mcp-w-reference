@@ -16,12 +16,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
 ]
-
-[project.urls]
-Homepage = "https://github.com/chughtapan/restful-mcp"
-Documentation = "https://restful-mcp.readthedocs.io"
-Repository = "https://github.com/chughtapan/restful-mcp"
-Issues = "https://github.com/chughtapan/restful-mcp/issues"
 dependencies = [
     # Core framework dependencies
     "pydantic>=2.11.5",
@@ -45,6 +39,12 @@ dependencies = [
     "mkdocs-material>=9.5.0",
     "mkdocstrings[python]>=0.24.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chughtapan/restful-mcp"
+Documentation = "https://restful-mcp.readthedocs.io"
+Repository = "https://github.com/chughtapan/restful-mcp"
+Issues = "https://github.com/chughtapan/restful-mcp/issues"
 
 [project.scripts]
 restful-mcp-agent = "restful_mcp.agent:main"
